@@ -1,0 +1,65 @@
+# Model pool. Ordered cheapest -> most expensive (cascades use this order).
+# Every entry is an open-weight model served by vLLM. Swap freely.
+#
+# cost:
+#   gpu_hourly_usd  - what one GPU-hour costs you (cloud list price or amortised on-prem)
+#   num_gpus        - GPUs this model occupies (tensor_parallel_size)
+#   The bench MEASURES throughput during collection and derives $/token from these,
+#   so cost reflects your hardware, not a made-up price sheet.
+#   price_in/out_per_mtok - optional fixed override ($ per 1M tokens) if you prefer API-style pricing.
+
+gpu_hourly_usd: 2.00          # e.g. one A100 80GB / H100 slice; edit to your rate
+
+models:
+  - name: qwen2.5-1.5b
+    hf_id: Qwen/Qwen2.5-1.5B-Instruct
+    port: 8001
+    num_gpus: 1
+    gpu_memory_utilization: 0.18
+    max_model_len: 4096
+    tier: small
+
+  - name: llama3.1-8b
+    hf_id: meta-llama/Llama-3.1-8B-Instruct
+    port: 8002
+    num_gpus: 1
+    gpu_memory_utilization: 0.30
+    max_model_len: 4096
+    tier: medium
+
+  - name: qwen2.5-7b
+    hf_id: Qwen/Qwen2.5-7B-Instruct
+    port: 8003
+    num_gpus: 1
+    gpu_memory_utilization: 0.30
+    max_model_len: 4096
+    tier: medium
+
+  - name: qwen2.5-32b-awq
+    hf_id: Qwen/Qwen2.5-32B-Instruct-AWQ
+    port: 8004
+    num_gpus: 1
+    gpu_memory_utilization: 0.90     # run alone, or on a second GPU
+    max_model_len: 4096
+    quantization: awq
+    tier: large
+
+  # Bigger box (2-4 GPUs)? add e.g.
+  # - name: llama3.3-70b
+  #   hf_id: meta-llama/Llama-3.3-70B-Instruct
+  #   port: 8005
+  #   num_gpus: 4
+  #   tier: large
+
+# Auxiliary models used by specific papers
+aux:
+  embedder: BAAI/bge-small-en-v1.5                     # query embeddings (most learned routers)
+  reward_model: OpenAssistant/reward-model-deberta-v3-large-v2   # Zooter, Hybrid-LLM quality signal
+  pairranker: llm-blender/PairRM                       # LLM-Blender
+  genfuser: llm-blender/gen_fuser_3b                   # LLM-Blender
+  # Tryage-style domain experts (optional; added to the pool only for the tryage experiment)
+  experts:
+    - name: qwen2.5-coder-7b
+      hf_id: Qwen/Qwen2.5-Coder-7B-Instruct
+    - name: qwen2.5-math-7b
+      hf_id: Qwen/Qwen2.5-Math-7B-Instruct

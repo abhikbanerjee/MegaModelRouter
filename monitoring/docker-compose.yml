@@ -1,0 +1,100 @@
+# Observability stack for the routing lab.
+#
+#   docker compose -f monitoring/docker-compose.yml up -d                 # Phoenix + OTel + Prometheus + Grafana
+#   docker compose -f monitoring/docker-compose.yml --profile gpu up -d   # + NVIDIA DCGM exporter (GPU host)
+#   docker compose -f monitoring/docker-compose.yml --profile vllm up -d  # + the 4-model vLLM pool in containers
+#
+# Ports on the host:  Phoenix UI 6006 · OTLP 4317/4318 (collector) · Prometheus 9090 · Grafana 3000
+# The gateway, mock pool and (by default) vLLM run on the host; containers reach them via host.docker.internal.
+name: routerlab
+
+x-host: &host
+  extra_hosts: ["host.docker.internal:host-gateway"]
+
+services:
+  phoenix-db:
+    image: postgres:16
+    environment: {POSTGRES_USER: phoenix, POSTGRES_PASSWORD: phoenix, POSTGRES_DB: phoenix}
+    volumes: [phoenix-db:/var/lib/postgresql/data]
+    healthcheck: {test: ["CMD-SHELL", "pg_isready -U phoenix"], interval: 5s, retries: 20}
+    restart: unless-stopped
+
+  phoenix:
+    image: arizephoenix/phoenix:latest          # pin a version tag for reproducibility
+    depends_on: {phoenix-db: {condition: service_healthy}}
+    environment:
+      PHOENIX_SQL_DATABASE_URL: postgresql://phoenix:phoenix@phoenix-db:5432/phoenix
+      PHOENIX_DEFAULT_RETENTION_POLICY_DAYS: "30"
+    ports: ["6006:6006"]                         # UI + OTLP/HTTP (collector sends here)
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    command: ["--config=/etc/otelcol/collector.yaml"]
+    volumes: ["./otel/collector.yaml:/etc/otelcol/collector.yaml:ro"]
+    environment: {PHOENIX_OTLP_ENDPOINT: "http://phoenix:6006"}
+    ports: ["4317:4317", "4318:4318"]            # gateway exports OTLP here
+    depends_on: [phoenix]
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    <<: *host
+    volumes: ["./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro", "prom-data:/prometheus"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=15d",
+              "--web.enable-lifecycle"]
+    ports: ["9090:9090"]
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/llm_routing_otel.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["3000:3000"]
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+  dcgm-exporter:
+    profiles: [gpu]
+    image: nvcr.io/nvidia/k8s/dcgm-exporter:3.3.8-3.6.0-ubuntu22.04
+    cap_add: [SYS_ADMIN]
+    deploy: {resources: {reservations: {devices: [{driver: nvidia, count: all, capabilities: [gpu]}]}}}
+    ports: ["9400:9400"]
+    restart: unless-stopped
+
+  # ---- optional: the default model pool as containers (same ports as configs/models.yaml)
+  vllm-qwen-1.5b: &vllm
+    profiles: [vllm]
+    image: vllm/vllm-openai:latest
+    ipc: host
+    environment: {HUGGING_FACE_HUB_TOKEN: "${HF_TOKEN:-}"}
+    volumes: ["${HOME}/.cache/huggingface:/root/.cache/huggingface"]
+    deploy: {resources: {reservations: {devices: [{driver: nvidia, device_ids: ["0"], capabilities: [gpu]}]}}}
+    command: ["--model", "Qwen/Qwen2.5-1.5B-Instruct", "--gpu-memory-utilization", "0.10", "--max-model-len", "4096",
+              "--enable-prefix-caching", "--max-logprobs", "20"]
+    ports: ["8001:8000"]
+  vllm-llama-8b:
+    <<: *vllm
+    command: ["--model", "meta-llama/Llama-3.1-8B-Instruct", "--gpu-memory-utilization", "0.28", "--max-model-len", "4096",
+              "--enable-prefix-caching", "--max-logprobs", "20"]
+    ports: ["8002:8000"]
+  vllm-qwen-7b:
+    <<: *vllm
+    command: ["--model", "Qwen/Qwen2.5-7B-Instruct", "--gpu-memory-utilization", "0.28", "--max-model-len", "4096",
+              "--enable-prefix-caching", "--max-logprobs", "20"]
+    ports: ["8003:8000"]
+  vllm-qwen-32b:
+    <<: *vllm
+    deploy: {resources: {reservations: {devices: [{driver: nvidia, device_ids: ["1"], capabilities: [gpu]}]}}}
+    command: ["--model", "Qwen/Qwen2.5-32B-Instruct-AWQ", "--quantization", "awq", "--gpu-memory-utilization", "0.90",
+              "--max-model-len", "4096", "--enable-prefix-caching", "--max-logprobs", "20"]
+    ports: ["8004:8000"]
+
+volumes:
+  phoenix-db: {}
+  prom-data: {}

@@ -1,0 +1,10 @@
+# Demo pool: same four model names as models.yaml, all served by routerlab.mockserver on :8000.
+# Lets you run the full live stack (gateway, Phoenix, OTel, Grafana) with no GPU.
+gpu_hourly_usd: 2.00
+models:
+  - {name: qwen2.5-1.5b,    hf_id: Qwen/Qwen2.5-1.5B-Instruct,     port: 8000, tier: small}
+  - {name: llama3.1-8b,     hf_id: meta-llama/Llama-3.1-8B-Instruct, port: 8000, tier: medium}
+  - {name: qwen2.5-7b,      hf_id: Qwen/Qwen2.5-7B-Instruct,       port: 8000, tier: medium}
+  - {name: qwen2.5-32b-awq, hf_id: Qwen/Qwen2.5-32B-Instruct-AWQ,  port: 8000, tier: large}
+aux:
+  embedder: ""      # hashing features, matches `collect.py --mock`

@@ -1,0 +1,27 @@
+# OpenTelemetry Collector: one OTLP endpoint for the gateway; fans out to Phoenix and Prometheus.
+receivers:
+  otlp:
+    protocols:
+      grpc: {endpoint: 0.0.0.0:4317}
+      http: {endpoint: 0.0.0.0:4318}
+
+processors:
+  batch: {}
+  memory_limiter: {check_interval: 2s, limit_mib: 512}
+
+exporters:
+  otlphttp/phoenix:                       # traces -> Arize Phoenix (OTLP/HTTP at /v1/traces)
+    endpoint: ${env:PHOENIX_OTLP_ENDPOINT:-http://phoenix:6006}
+    tls: {insecure: true}
+    sending_queue: {enabled: true, queue_size: 20000}   # Phoenix answers 503 when busy; buffer + retry
+    retry_on_failure: {enabled: true, initial_interval: 1s, max_interval: 30s, max_elapsed_time: 30m}
+  prometheus:                             # metrics -> scraped by Prometheus on :8889
+    endpoint: 0.0.0.0:8889
+    resource_to_telemetry_conversion: {enabled: false}
+    enable_open_metrics: true
+  debug: {verbosity: basic}
+
+service:
+  pipelines:
+    traces:  {receivers: [otlp], processors: [memory_limiter, batch], exporters: [otlphttp/phoenix]}
+    metrics: {receivers: [otlp], processors: [memory_limiter, batch], exporters: [prometheus]}

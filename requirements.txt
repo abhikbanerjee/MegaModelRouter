@@ -1,0 +1,27 @@
+# core (CPU is enough for routers + evaluation)
+numpy>=1.26
+pandas>=2.1
+pyarrow>=14
+scikit-learn>=1.4
+scipy>=1.11
+pyyaml
+matplotlib
+tabulate
+# GPU inference + data
+vllm>=0.6            # model serving / offline batch generation (CUDA)
+transformers>=4.44
+datasets>=2.20
+sentence-transformers>=3.0
+# optional: LLM-Blender PairRM + GenFuser
+# llm-blender @ git+https://github.com/yuchenlin/LLM-Blender.git
+# live gateway + monitoring
+fastapi
+uvicorn
+httpx
+opentelemetry-sdk>=1.27
+opentelemetry-exporter-otlp-proto-http>=1.27
+nvidia-ml-py         # NVML GPU gauges exported as OTel metrics
+# arize-phoenix      # only for `make demo-local` (Phoenix without docker); docker image otherwise
+streamlit
+plotly
+pytest

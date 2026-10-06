@@ -1,0 +1,32 @@
+seed: 0
+out_dir: runs/default
+
+# Benchmarks and how many items to sample from each (null = all).
+tasks:
+  mmlu: 1500        # 57 subjects, MCQ        (Routoo, EmbedLLM, benchmark-routing, OptLLM)
+  arc_challenge: 500
+  hellaswag: 500
+  gsm8k: 600        # math reasoning          (multiple-minds, AutoMix, EcoAssistant)
+  sst2: 400         # classification          (MetaLLM, Cache&Distil, two-tier)
+  ag_news: 400
+  mbpp: 0           # code (set >0 to enable; executes generated code in a subprocess)
+
+split:
+  train: 0.6
+  val: 0.1
+  test: 0.3
+
+generation:
+  temperature: 0.0
+  max_tokens_mcq: 16
+  max_tokens_gen: 512
+  logprobs: 5                 # top-k logprobs per token (two-tier, Cache&Distil, MetaLLM)
+
+# Extra signals; each is one more pass over the data. Turn off to save GPU time.
+extras:
+  self_verify: true           # AutoMix: small models verify their own answers (k samples)
+  self_verify_k: 8
+  self_verify_models: [qwen2.5-1.5b, llama3.1-8b, qwen2.5-7b]
+  reward_scores: true         # Zooter / Hybrid-LLM: reward model scores every output
+  answer_nll: true            # Tryage: per-model NLL of the gold answer
+  ensemble_fusion: true       # LLM-Blender GenFuser over top-k candidates

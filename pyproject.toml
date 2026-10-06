@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "megamodelrouter"
+version = "0.2.0"
+description = "Reproduce, compare and serve 19 LLM-routing papers on open-weight models, with Arize Phoenix tracing and OpenTelemetry metrics."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Abhik Banerjee" }]
+keywords = ["llm", "routing", "model-routing", "vllm", "opentelemetry", "arize-phoenix", "cascades"]
+dependencies = [
+  "numpy>=1.26", "pandas>=2.1", "pyarrow>=14", "scikit-learn>=1.4", "scipy>=1.11",
+  "pyyaml", "matplotlib", "tabulate", "httpx",
+]
+
+[project.optional-dependencies]
+# live gateway, OpenTelemetry, control room
+live = [
+  "fastapi", "uvicorn", "opentelemetry-sdk>=1.27", "opentelemetry-exporter-otlp-proto-http>=1.27",
+  "streamlit", "plotly", "nvidia-ml-py",
+]
+# GPU collection with real models
+gpu = ["vllm>=0.6", "transformers>=4.44", "datasets>=2.20", "sentence-transformers>=3.0"]
+# Phoenix without Docker (make demo-local)
+phoenix = ["arize-phoenix"]
+dev = ["pytest", "ruff", "tabulate"]
+
+[tool.setuptools.packages.find]
+include = ["routerlab*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501", "E731", "E702", "E741"]

@@ -1,0 +1,7 @@
+apiVersion: 1
+providers:
+  - name: routerlab
+    folder: LLM Routing
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

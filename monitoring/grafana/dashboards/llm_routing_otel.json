@@ -1,0 +1,1107 @@
+{
+ "title": "LLM Routing (OTel)",
+ "uid": "routerlab-otel",
+ "schemaVersion": 39,
+ "refresh": "10s",
+ "time": {
+  "from": "now-30m",
+  "to": "now"
+ },
+ "tags": [
+  "routing",
+  "otel"
+ ],
+ "panels": [
+  {
+   "type": "row",
+   "title": "Is routing paying off?  (vs. sending everything to the strongest model)",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "id": 1,
+   "panels": []
+  },
+  {
+   "type": "stat",
+   "title": "Cost saved",
+   "description": "1 - routed $ / $ if every request had gone to the strongest model",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "id": 2,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "100 * (1 - sum(increase(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__range])) / sum(increase(routerlab_baseline_cost_usd_total{strategy=~\"$strategy\"}[$__range])))",
+     "legendFormat": ""
+    }
+   ]
+  },
+  {
+   "type": "stat",
+   "title": "Live accuracy",
+   "description": "From /feedback (loadgen scores every answer)",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "decimals": 1
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "id": 3,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(increase(routerlab_feedback_total{strategy=~\"$strategy\",correct=\"true\"}[$__range])) / sum(increase(routerlab_feedback_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": ""
+    }
+   ]
+  },
+  {
+   "type": "stat",
+   "title": "Spend (range)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD",
+     "decimals": 4
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "id": 4,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(increase(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": ""
+    }
+   ]
+  },
+  {
+   "type": "stat",
+   "title": "Requests (range)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "decimals": 0
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 1,
+    "w": 6,
+    "h": 5
+   },
+   "id": 5,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(increase(routerlab_requests_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": ""
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Spend rate: routed vs always-strongest",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 6,
+    "w": 24,
+    "h": 7
+   },
+   "id": 6,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "3600 * sum(rate(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "routed $/h"
+    },
+    {
+     "refId": "B",
+     "expr": "3600 * sum(rate(routerlab_baseline_cost_usd_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "always-strongest $/h"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Strategy comparison",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 13,
+    "w": 24,
+    "h": 1
+   },
+   "id": 7,
+   "panels": []
+  },
+  {
+   "type": "table",
+   "title": "Scorecard by strategy (range)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "decimals": 3,
+     "custom": {
+      "cellOptions": {
+       "type": "color-text"
+      }
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "accuracy"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       },
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "gauge",
+         "mode": "lcd"
+        }
+       },
+       {
+        "id": "min",
+        "value": 0
+       },
+       {
+        "id": "max",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "$ per 1k requests"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "currencyUSD"
+       },
+       {
+        "id": "decimals",
+        "value": 4
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "saved vs strongest %"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percent"
+       },
+       {
+        "id": "decimals",
+        "value": 1
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "requests"
+      },
+      "properties": [
+       {
+        "id": "decimals",
+        "value": 0
+       }
+      ]
+     }
+    ]
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 14,
+    "w": 24,
+    "h": 10
+   },
+   "id": 8,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (increase(routerlab_feedback_total{strategy=~\"$strategy\",correct=\"true\"}[$__range])) / sum by (strategy) (increase(routerlab_feedback_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    },
+    {
+     "refId": "B",
+     "expr": "1000 * sum by (strategy) (increase(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__range])) / sum by (strategy) (increase(routerlab_requests_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    },
+    {
+     "refId": "C",
+     "expr": "100 * (1 - sum by (strategy) (increase(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__range])) / sum by (strategy) (increase(routerlab_baseline_cost_usd_total{strategy=~\"$strategy\"}[$__range])))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    },
+    {
+     "refId": "D",
+     "expr": "histogram_quantile(0.95, sum by (le, strategy) (increase(routerlab_request_duration_seconds_bucket{strategy=~\"$strategy\"}[$__range])))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    },
+    {
+     "refId": "E",
+     "expr": "sum by (strategy) (increase(routerlab_llm_calls_total{strategy=~\"$strategy\"}[$__range])) / sum by (strategy) (increase(routerlab_requests_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    },
+    {
+     "refId": "F",
+     "expr": "sum by (strategy) (increase(routerlab_requests_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge"
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "accuracy",
+       "Value #B": "$ per 1k requests",
+       "Value #C": "saved vs strongest %",
+       "Value #D": "p95 latency (s)",
+       "Value #E": "LLM calls / request",
+       "Value #F": "requests"
+      }
+     }
+    },
+    {
+     "id": "sortBy",
+     "options": {
+      "sort": [
+       {
+        "field": "accuracy",
+        "desc": true
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "type": "xychart",
+   "title": "Accuracy vs $ per 1k requests (each point = a strategy; up-left is better)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "show": "points",
+      "pointSize": {
+       "fixed": 9
+      }
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 24,
+    "w": 24,
+    "h": 11
+   },
+   "id": 9,
+   "options": {
+    "mapping": "manual",
+    "series": [
+     {
+      "x": "$ per 1k",
+      "y": "accuracy",
+      "name": "strategies",
+      "pointSize": {
+       "fixed": 9
+      }
+     }
+    ],
+    "tooltip": {
+     "mode": "single"
+    },
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "1000 * sum by (strategy) (increase(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__range])) / sum by (strategy) (increase(routerlab_requests_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    },
+    {
+     "refId": "B",
+     "expr": "sum by (strategy) (increase(routerlab_feedback_total{strategy=~\"$strategy\",correct=\"true\"}[$__range])) / sum by (strategy) (increase(routerlab_feedback_total{strategy=~\"$strategy\"}[$__range]))",
+     "legendFormat": "",
+     "format": "table",
+     "instant": true
+    }
+   ],
+   "transformations": [
+    {
+     "id": "merge"
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {
+       "Time": true
+      },
+      "renameByName": {
+       "Value #A": "$ per 1k",
+       "Value #B": "accuracy"
+      }
+     }
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Accuracy over time",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 35,
+    "w": 12,
+    "h": 8
+   },
+   "id": 10,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(routerlab_feedback_total{strategy=~\"$strategy\",correct=\"true\"}[5m])) / sum by (strategy) (rate(routerlab_feedback_total{strategy=~\"$strategy\"}[5m]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "$ per request over time",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 35,
+    "w": 12,
+    "h": 8
+   },
+   "id": 11,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(routerlab_cost_usd_total{strategy=~\"$strategy\"}[$__rate_interval])) / sum by (strategy) (rate(routerlab_requests_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Latency p50 / p95 by strategy",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 43,
+    "w": 12,
+    "h": 8
+   },
+   "id": 12,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.95, sum by (le, strategy) (rate(routerlab_request_duration_seconds_bucket{strategy=~\"$strategy\"}[$__rate_interval])))",
+     "legendFormat": "p95 {{strategy}}"
+    },
+    {
+     "refId": "B",
+     "expr": "histogram_quantile(0.5, sum by (le, strategy) (rate(routerlab_request_duration_seconds_bucket{strategy=~\"$strategy\"}[$__rate_interval])))",
+     "legendFormat": "p50 {{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Requests / s by strategy",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 43,
+    "w": 12,
+    "h": 8
+   },
+   "id": 13,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(routerlab_requests_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Routing behaviour",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 51,
+    "w": 24,
+    "h": 1
+   },
+   "id": 14,
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "Which model answers? (share of answers)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "stacking": {
+       "mode": "percent"
+      },
+      "fillOpacity": 60,
+      "lineWidth": 0
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 52,
+    "w": 12,
+    "h": 8
+   },
+   "id": 15,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (model) (rate(routerlab_requests_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "{{model}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Escalation rate (cascades)",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 52,
+    "w": 12,
+    "h": 8
+   },
+   "id": 16,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(routerlab_escalations_total{strategy=~\"$strategy\"}[$__rate_interval])) / sum by (strategy) (rate(routerlab_requests_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "LLM calls per request",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 60,
+    "w": 8,
+    "h": 8
+   },
+   "id": 17,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(routerlab_llm_calls_total{strategy=~\"$strategy\"}[$__rate_interval])) / sum by (strategy) (rate(routerlab_requests_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Semantic-cache hit rate",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 60,
+    "w": 8,
+    "h": 8
+   },
+   "id": 18,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (strategy) (rate(routerlab_cache_hits_total{strategy=~\"$strategy\"}[$__rate_interval])) / sum by (strategy) (rate(routerlab_requests_total{strategy=~\"$strategy\"}[$__rate_interval]))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Router decision overhead p95",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 60,
+    "w": 8,
+    "h": 8
+   },
+   "id": 19,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.95, sum by (le, strategy) (rate(routerlab_router_decide_duration_seconds_bucket{strategy=~\"$strategy\"}[$__rate_interval])))",
+     "legendFormat": "{{strategy}}"
+    }
+   ]
+  },
+  {
+   "type": "row",
+   "title": "Models & GPUs",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 68,
+    "w": 24,
+    "h": 1
+   },
+   "id": 20,
+   "panels": []
+  },
+  {
+   "type": "timeseries",
+   "title": "$ by model",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUSD",
+     "custom": {
+      "stacking": {
+       "mode": "normal"
+      },
+      "fillOpacity": 60,
+      "lineWidth": 0
+     }
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 69,
+    "w": 8,
+    "h": 8
+   },
+   "id": 21,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "3600 * sum by (model) (rate(routerlab_cost_usd_total[$__rate_interval]))",
+     "legendFormat": "{{model}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Model call latency p95",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 69,
+    "w": 8,
+    "h": 8
+   },
+   "id": 22,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.95, sum by (le, model) (rate(routerlab_llm_duration_seconds_bucket[$__rate_interval])))",
+     "legendFormat": "{{model}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "Tokens / s",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 69,
+    "w": 8,
+    "h": 8
+   },
+   "id": 23,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (model) (rate(routerlab_llm_tokens_total{direction=\"output\"}[$__rate_interval]))",
+     "legendFormat": "out {{model}}"
+    },
+    {
+     "refId": "B",
+     "expr": "sum by (model) (rate(routerlab_llm_tokens_total{direction=\"input\"}[$__rate_interval]))",
+     "legendFormat": "in {{model}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "GPU utilisation",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 77,
+    "w": 8,
+    "h": 8
+   },
+   "id": 24,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "DCGM_FI_DEV_GPU_UTIL",
+     "legendFormat": "GPU {{gpu}} (DCGM)"
+    },
+    {
+     "refId": "B",
+     "expr": "routerlab_gpu_utilization",
+     "legendFormat": "GPU {{gpu}} (NVML)"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "GPU memory used",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 77,
+    "w": 8,
+    "h": 8
+   },
+   "id": 25,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "DCGM_FI_DEV_FB_USED * 1048576",
+     "legendFormat": "GPU {{gpu}} (DCGM)"
+    },
+    {
+     "refId": "B",
+     "expr": "routerlab_gpu_memory_used_bytes",
+     "legendFormat": "GPU {{gpu}} (NVML)"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "GPU power",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "watt"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 77,
+    "w": 8,
+    "h": 8
+   },
+   "id": 26,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "DCGM_FI_DEV_POWER_USAGE",
+     "legendFormat": "GPU {{gpu}} (DCGM)"
+    },
+    {
+     "refId": "B",
+     "expr": "routerlab_gpu_power",
+     "legendFormat": "GPU {{gpu}} (NVML)"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "vLLM queue: running / waiting",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 85,
+    "w": 8,
+    "h": 8
+   },
+   "id": 27,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (model_name) (vllm:num_requests_running)",
+     "legendFormat": "running {{model_name}}"
+    },
+    {
+     "refId": "B",
+     "expr": "sum by (model_name) (vllm:num_requests_waiting)",
+     "legendFormat": "waiting {{model_name}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "vLLM KV-cache usage",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 85,
+    "w": 8,
+    "h": 8
+   },
+   "id": 28,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "vllm:gpu_cache_usage_perc",
+     "legendFormat": "{{model_name}}"
+    },
+    {
+     "refId": "B",
+     "expr": "vllm:kv_cache_usage_perc",
+     "legendFormat": "{{model_name}}"
+    }
+   ]
+  },
+  {
+   "type": "timeseries",
+   "title": "vLLM time to first token p95",
+   "description": "",
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prom"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s"
+    },
+    "overrides": []
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 85,
+    "w": 8,
+    "h": 8
+   },
+   "id": 29,
+   "options": {},
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.95, sum by (le, model_name) (rate(vllm:time_to_first_token_seconds_bucket[$__rate_interval])))",
+     "legendFormat": "{{model_name}}"
+    }
+   ]
+  }
+ ],
+ "links": [
+  {
+   "title": "Traces in Arize Phoenix",
+   "type": "link",
+   "url": "http://localhost:6006",
+   "targetBlank": true,
+   "icon": "external link"
+  },
+  {
+   "title": "Routing control room",
+   "type": "link",
+   "url": "http://localhost:8501",
+   "targetBlank": true
+  }
+ ],
+ "templating": {
+  "list": [
+   {
+    "name": "strategy",
+    "label": "Strategy",
+    "type": "query",
+    "datasource": {
+     "type": "prometheus",
+     "uid": "prom"
+    },
+    "query": {
+     "query": "label_values(routerlab_requests_total, strategy)",
+     "refId": "S"
+    },
+    "definition": "label_values(routerlab_requests_total, strategy)",
+    "multi": true,
+    "includeAll": true,
+    "allValue": ".*",
+    "current": {
+     "text": "All",
+     "value": "$__all"
+    },
+    "refresh": 2,
+    "sort": 1
+   }
+  ]
+ }
+}
